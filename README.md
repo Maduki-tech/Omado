@@ -2,6 +2,9 @@
 
 A minimal todo list bar widget for [Omarchy](https://omarchyplugins.com/).
 
+![preview](./preview.png) 
+
+
 Add, complete, and clear tasks right from your bar. Tasks are stored locally in
 `~/.local/state/omarchy/settings/maduki-tech.todo.json` — no accounts, no network.
 
