@@ -15,6 +15,11 @@ Panel {
     readonly property string label: ""
     property int remaining: 0
 
+    // Index of the row being edited (-1 = none), plus the TextField holding
+    // it so switching to another row can flush the pending text first.
+    property int editingIndex: -1
+    property var activeEditor: null
+
     readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/settings"
     readonly property string todoPath: stateDir + "/maduki-tech.todo.json"
 
@@ -31,6 +36,9 @@ Panel {
     }
 
     function close() {
+        // The panel stays mapped through its fade-out, so the editor's
+        // focus-loss handler cannot be relied on here.
+        flushEdit();
         setCenterHoverRevealSuppressed(false);
         root.controller.hide();
     }
@@ -85,7 +93,41 @@ Panel {
         todoFile.setText(JSON.stringify(todos, null, 2) + "\n");
     }
 
+    function cancelEdit() {
+        root.editingIndex = -1;
+    }
+
+    function flushEdit() {
+        if (root.editingIndex >= 0 && root.activeEditor)
+            root.commitEdit(root.editingIndex, root.activeEditor.text);
+        root.editingIndex = -1;
+    }
+
+    // Right-click entry point. Any row already being edited is committed
+    // first; otherwise its text is dropped when the delegate loses focus.
+    function startEdit(index) {
+        if (index < 0 || index >= todoModel.count)
+            return;
+        if (root.editingIndex !== index)
+            flushEdit();
+        root.editingIndex = index;
+    }
+
+    // editingIndex is cleared before saveTodos(): the save round-trips
+    // through FileView and rebuilds the model, destroying the editor.
+    function commitEdit(index, text) {
+        var title = String(text).replace(/^\s+|\s+$/g, "");
+        root.editingIndex = -1;
+        if (index < 0 || index >= todoModel.count)
+            return;
+        if (title === "" || title === todoModel.get(index).title)
+            return;
+        todoModel.setProperty(index, "title", title);
+        saveTodos();
+    }
+
     function addTodo() {
+        root.cancelEdit();
         var title = todoField.text.replace(/^\s+|\s+$/g, "");
         if (title === "")
             return;
@@ -100,6 +142,7 @@ Panel {
     }
 
     function toggleTodo(index) {
+        root.cancelEdit();
         if (index < 0 || index >= todoModel.count)
             return;
         todoModel.setProperty(index, "completed", !todoModel.get(index).completed);
@@ -108,6 +151,7 @@ Panel {
     }
 
     function removeTodo(index) {
+        root.cancelEdit();
         if (index < 0 || index >= todoModel.count)
             return;
         todoModel.remove(index);
@@ -116,6 +160,7 @@ Panel {
     }
 
     function clearCompleted() {
+        root.cancelEdit();
         var removed = false;
         for (var i = todoModel.count - 1; i >= 0; --i) {
             if (todoModel.get(i).completed) {
@@ -164,7 +209,7 @@ Panel {
         PanelKeyCatcher {
             id: keyCatcher
             anchors.fill: parent
-            blocked: todoField.activeFocus
+            blocked: todoField.activeFocus || root.editingIndex >= 0
             onCloseRequested: root.close()
             onTabRequested: function (direction) {
                 root.switchPanel(direction);
@@ -286,9 +331,12 @@ Panel {
                         spacing: Style.space(4)
 
                         delegate: Rectangle {
+                            id: todoRow
                             required property int index
                             required property string title
                             required property bool completed
+
+                            readonly property bool editing: root.editingIndex === index
 
                             width: todoList.width - Style.space(32)
                             x: Style.space(16)
@@ -311,6 +359,7 @@ Panel {
                                 }
 
                                 Text {
+                                    visible: !todoRow.editing
                                     width: parent.width - Style.space(72)
                                     text: title
                                     color: completed ? Qt.darker(root.bar.foreground, 1.6) : root.bar.foreground
@@ -319,6 +368,51 @@ Panel {
                                     font.strikeout: completed
                                     elide: Text.ElideRight
                                     anchors.verticalCenter: parent.verticalCenter
+                                }
+
+                                TextField {
+                                    id: editField
+                                    visible: todoRow.editing
+                                    width: parent.width - Style.space(72)
+                                    foreground: root.bar.foreground
+                                    font.family: root.bar.fontFamily
+                                    verticalPadding: Style.space(2)
+                                    anchors.verticalCenter: parent.verticalCenter
+
+                                    function beginEdit() {
+                                        root.activeEditor = editField;
+                                        text = todoRow.title;
+                                        forceActiveFocus();
+                                        selectAll();
+                                    }
+
+                                    // A save rebuilds the model, so a delegate can be
+                                    // created with editing already true, in which case
+                                    // onVisibleChanged never fires.
+                                    Component.onCompleted: if (visible)
+                                        Qt.callLater(beginEdit)
+                                    onVisibleChanged: if (visible)
+                                        beginEdit()
+
+                                    // Clicking away keeps the edit rather than dropping
+                                    // it. commitEdit() clears editingIndex first, so
+                                    // this cannot recurse.
+                                    onActiveFocusChanged: {
+                                        if (!activeFocus && todoRow.editing)
+                                            root.commitEdit(todoRow.index, editField.text);
+                                    }
+
+                                    Keys.onPressed: function (event) {
+                                        if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                            root.commitEdit(todoRow.index, editField.text);
+                                            event.accepted = true;
+                                        } else if (event.key === Qt.Key_Escape) {
+                                            root.cancelEdit();
+                                            event.accepted = true;
+                                        } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
+                                            event.accepted = true;
+                                        }
+                                    }
                                 }
 
                             }
@@ -356,8 +450,14 @@ Panel {
                                 anchors.rightMargin: Style.space(48)
                                 z: -1
                                 hoverEnabled: true
+                                acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.toggleTodo(index)
+                                onClicked: function (mouse) {
+                                    if (mouse.button === Qt.RightButton)
+                                        root.startEdit(index);
+                                    else
+                                        root.toggleTodo(index);
+                                }
                             }
                         }
                     }
