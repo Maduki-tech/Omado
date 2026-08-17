@@ -47,6 +47,7 @@ test("panel exposes core todo interactions", () => {
   includes(panel, "onClicked: root.removeTodo(index)");
   includes(panel, "root.toggleTodo(index)");
   includes(panel, "root.startEdit(index)");
+  includes(panel, 'todoModel.move(index, completed ? todoModel.count - 1 : 0, 1)');
   includes(panel, 'text: "Clear completed"');
 });
 
@@ -67,6 +68,9 @@ test("panel exposes the global Quick Add overlay", () => {
   includes(panel, 'name: "quick-add"');
   includes(panel, "function openQuickAdd()");
   includes(panel, "function closeQuickAdd()");
+  includes(panel, 'root.bar.findPanelWidget(root.moduleName)');
+  includes(panel, "focusedWidget !== root.hostWidget");
+  includes(panel, "root.close();");
   includes(panel, "WlrLayer.Overlay");
   includes(panel, "WlrKeyboardFocus.Exclusive");
   includes(panel, 'WlrLayershell.namespace: "maduki-tech-omado-quick-add"');

@@ -58,6 +58,17 @@ Panel {
     }
 
     function openQuickAdd() {
+        // Each monitor has its own bar-widget instance. Let the bar choose
+        // the instance on the focused monitor, then open only that overlay.
+        var focusedWidget = root.bar && typeof root.bar.findPanelWidget === "function"
+            ? root.bar.findPanelWidget(root.moduleName) : null;
+        if (!focusedWidget || focusedWidget !== root.hostWidget)
+            return;
+
+        // Keep the quick-add overlay as the only active panel, so one Escape
+        // always closes the menu instead of revealing the todo panel beneath it.
+        if (root.opened)
+            root.close();
         root.quickAddOpen = true;
         Qt.callLater(function () {
             if (root.quickAddOpen) {
@@ -169,7 +180,10 @@ Panel {
         root.cancelEdit();
         if (index < 0 || index >= todoModel.count)
             return;
-        todoModel.setProperty(index, "completed", !todoModel.get(index).completed);
+        var completed = !todoModel.get(index).completed;
+        todoModel.setProperty(index, "completed", completed);
+        // Keep the two states separated without changing order within either group.
+        todoModel.move(index, completed ? todoModel.count - 1 : 0, 1);
         saveTodos();
         recount();
     }

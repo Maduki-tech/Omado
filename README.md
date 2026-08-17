@@ -12,7 +12,7 @@ Add, complete, and clear tasks right from your bar. Tasks are stored locally in
 
 - Add tasks from the bar popup (Enter to confirm)
 - Quick Add overlay from a global keyboard shortcut
-- Toggle and remove individual tasks
+- Open tasks stay above completed tasks automatically
 - Clear all completed tasks in one click
 - Live "remaining" counter in the panel header
 - Keyboard friendly: Esc closes, Tab switches panels
@@ -23,7 +23,7 @@ Omado exposes the global shortcut action `maduki-tech.omado:quick-add`. Bind it
 to any key combination in your Hyprland bindings, for example:
 
 ```lua
-o.bind("SUPER SHIFT, T", nil, hl.dsp.global("maduki-tech.omado:quick-add"))
+o.bind("SUPER + SHIFT + T", nil, hl.dsp.global("maduki-tech.omado:quick-add"))
 ```
 
 Reload Hyprland after adding the binding. Press the shortcut, enter a task, and

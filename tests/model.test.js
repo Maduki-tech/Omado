@@ -8,8 +8,8 @@ test("parses valid todos and normalizes titles", () => {
     { title: "  Buy milk  ", completed: true },
     { title: "Read book", completed: false }
   ])), [
-    { title: "Buy milk", completed: true },
-    { title: "Read book", completed: false }
+    { title: "Read book", completed: false },
+    { title: "Buy milk", completed: true }
   ]);
 });
 
@@ -48,4 +48,15 @@ test("preserves todo order", () => {
     { title: "Second" },
     { title: "Third" }
   ])).map((todo) => todo.title), ["First", "Second", "Third"]);
+});
+
+test("sorts completed todos after open todos while preserving group order", () => {
+  assert.deepEqual(parseTodos(JSON.stringify([
+    { title: "Done first", completed: true },
+    { title: "Open first", completed: false },
+    { title: "Done second", completed: true },
+    { title: "Open second", completed: false }
+  ])).map((todo) => todo.title), [
+    "Open first", "Open second", "Done first", "Done second"
+  ]);
 });

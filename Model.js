@@ -17,7 +17,9 @@ function parseTodos(raw) {
     } catch (e) {
         return []
     }
-    return todos
+    // Keep open tasks first while preserving the order within each group.
+    return todos.filter(function (todo) { return !todo.completed })
+        .concat(todos.filter(function (todo) { return todo.completed }))
 }
 
 if (typeof module !== "undefined") {
