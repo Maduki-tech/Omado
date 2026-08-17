@@ -311,7 +311,7 @@ Panel {
                                 }
 
                                 Text {
-                                    width: parent.width - Style.space(64)
+                                    width: parent.width - Style.space(72)
                                     text: title
                                     color: completed ? Qt.darker(root.bar.foreground, 1.6) : root.bar.foreground
                                     font.family: root.bar.fontFamily
@@ -321,26 +321,40 @@ Panel {
                                     anchors.verticalCenter: parent.verticalCenter
                                 }
 
+                            }
+
+                            Rectangle {
+                                id: trashButton
+                                width: Style.space(32)
+                                height: Style.space(32)
+                                x: parent.width - width - Style.space(8)
+                                y: (parent.height - height) / 2
+                                z: 10
+                                radius: Style.cornerRadius
+                                color: trashArea.containsMouse ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
+
                                 Text {
+                                    anchors.centerIn: parent
                                     text: "󰆴"
-                                    color: Qt.darker(root.bar.foreground, 1.4)
+                                    color: trashArea.containsMouse ? Color.accent : Qt.darker(root.bar.foreground, 1.4)
                                     font.family: root.bar.fontFamily
                                     font.pixelSize: Style.font.body
-                                    anchors.verticalCenter: parent.verticalCenter
+                                }
 
-                                    MouseArea {
-                                        anchors.fill: parent
-                                        anchors.margins: -Style.space(8)
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.removeTodo(index)
-                                    }
+                                MouseArea {
+                                    id: trashArea
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.removeTodo(index)
                                 }
                             }
 
                             MouseArea {
                                 id: rowArea
                                 anchors.fill: parent
-                                anchors.rightMargin: Style.space(36)
+                                anchors.rightMargin: Style.space(48)
+                                z: -1
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: root.toggleTodo(index)
