@@ -1,20 +1,20 @@
 {
-  "schemaVersion": 1,
-  "id": "maduki-tech.omado",
-  "name": "Omado",
-  "version": "1.0.0",
-  "author": "maduki-tech",
-  "description": "A minimal local todo list for your Omarchy bar",
-  "kinds": [
-    "bar-widget"
-  ],
-  "entryPoints": {
-    "barWidget": "BarWidget.qml"
-  },
-  "barWidget": {
-    "displayName": "Omado",
+    "schemaVersion": 1,
+    "id": "maduki-tech.omado",
+    "name": "Omado",
+    "version": "1.1.0",
+    "author": "maduki-tech",
     "description": "A minimal local todo list for your Omarchy bar",
-    "category": "Productivity",
-    "allowMultiple": false
-  }
+    "kinds": [
+        "bar-widget"
+    ],
+    "entryPoints": {
+        "barWidget": "BarWidget.qml"
+    },
+    "barWidget": {
+        "displayName": "Omado",
+        "description": "A minimal local todo list for your Omarchy bar",
+        "category": "Productivity",
+        "allowMultiple": false
+    }
 }
