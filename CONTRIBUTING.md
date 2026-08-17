@@ -21,7 +21,13 @@ After making changes, reload or restart the Omarchy shell so Quickshell loads up
 
 ## Testing Changes
 
-This project currently has no automated test suite. Test changes manually in a running Omarchy session:
+Run automated tests before submitting:
+
+```sh
+npm test
+```
+
+The test suite validates todo-data parsing, manifest metadata, and critical QML UI contracts. These UI checks verify source-level wiring; they do not render Quickshell components. Test UI changes manually in a running Omarchy session:
 
 - Enable the plugin and confirm the bar widget loads without shell errors.
 - Open and close the todo panel from the bar.
