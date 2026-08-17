@@ -7,41 +7,41 @@ BarWidget {
     moduleName: "maduki-tech.omado"
 
     function injectPanel() {
-        var target = panelLoader.item
+        var target = panelLoader.item;
         if (!target)
-            return
+            return;
         if ("bar" in target)
-            target.bar = root.bar
+            target.bar = root.bar;
         if ("settings" in target)
-            target.settings = root.settings
+            target.settings = root.settings;
         if ("anchorItem" in target)
-            target.anchorItem = button
+            target.anchorItem = button;
         if ("hostWidget" in target)
-            target.hostWidget = root
+            target.hostWidget = root;
     }
 
     function togglePanel() {
         if (panelLoader.item && panelLoader.item.toggle)
-            panelLoader.item.toggle()
+            panelLoader.item.toggle();
     }
 
     readonly property bool opened: panelLoader.item ? panelLoader.item.opened === true : false
 
     function open() {
         if (panelLoader.item && panelLoader.item.openFromHotkey)
-            panelLoader.item.openFromHotkey()
+            panelLoader.item.openFromHotkey();
     }
 
     function close() {
         if (panelLoader.item && panelLoader.item.close)
-            panelLoader.item.close()
+            panelLoader.item.close();
     }
 
     readonly property bool popoutSwitchClosing: panelLoader.item ? panelLoader.item.popoutSwitchClosing === true : false
 
     function closeForPopoutSwitch() {
         if (panelLoader.item && panelLoader.item.closeForPopoutSwitch)
-            panelLoader.item.closeForPopoutSwitch()
+            panelLoader.item.closeForPopoutSwitch();
     }
 
     visible: true
@@ -57,8 +57,8 @@ BarWidget {
         source: Qt.resolvedUrl("Panel.qml")
         visible: false
         onLoaded: {
-            root.injectPanel()
-            Qt.callLater(root.injectPanel)
+            root.injectPanel();
+            Qt.callLater(root.injectPanel);
         }
     }
 
@@ -71,7 +71,7 @@ BarWidget {
         tooltipText: "Todo list"
 
         onPressed: function (b) {
-            root.togglePanel()
+            root.togglePanel();
         }
     }
 }
