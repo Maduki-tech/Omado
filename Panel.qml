@@ -360,6 +360,7 @@ Panel {
 
                                 Text {
                                     visible: !todoRow.editing
+                                    id: titleText
                                     width: parent.width - Style.space(72)
                                     text: title
                                     color: completed ? Qt.darker(root.bar.foreground, 1.6) : root.bar.foreground
@@ -368,6 +369,12 @@ Panel {
                                     font.strikeout: completed
                                     elide: Text.ElideRight
                                     anchors.verticalCenter: parent.verticalCenter
+
+                                    PanelToolTip {
+                                        visible: rowArea.containsMouse && titleText.truncated
+                                        text: title
+                                        fontFamily: root.bar.fontFamily
+                                    }
                                 }
 
                                 TextField {
