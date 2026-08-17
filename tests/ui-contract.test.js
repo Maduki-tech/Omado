@@ -32,6 +32,7 @@ test("bar widget loads and injects panel dependencies", () => {
 test("panel exposes core todo interactions", () => {
   for (const functionName of [
     "addTodo",
+    "addTodoTitle",
     "toggleTodo",
     "removeTodo",
     "clearCompleted",
@@ -57,6 +58,20 @@ test("panel handles required keyboard actions", () => {
   includes(panel, "onCloseRequested: root.close()");
   includes(panel, "onTabRequested: function (direction)");
   includes(panel, "root.switchPanel(event.key === Qt.Key_Backtab ? -1 : 1)");
+});
+
+test("panel exposes the global Quick Add overlay", () => {
+  includes(panel, "import Quickshell.Hyprland");
+  includes(panel, "GlobalShortcut");
+  includes(panel, 'appid: "maduki-tech.omado"');
+  includes(panel, 'name: "quick-add"');
+  includes(panel, "function openQuickAdd()");
+  includes(panel, "function closeQuickAdd()");
+  includes(panel, "WlrLayer.Overlay");
+  includes(panel, "WlrKeyboardFocus.Exclusive");
+  includes(panel, 'WlrLayershell.namespace: "maduki-tech-omado-quick-add"');
+  includes(panel, 'text: "QUICK ADD"');
+  includes(panel, "root.addTodoTitle(text)");
 });
 
 test("panel renders empty and remaining-task states", () => {

@@ -1,6 +1,8 @@
 import QtQuick
 import Quickshell
+import Quickshell.Hyprland
 import Quickshell.Io
+import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
 import "Model.js" as Model
@@ -19,6 +21,7 @@ Panel {
     // it so switching to another row can flush the pending text first.
     property int editingIndex: -1
     property var activeEditor: null
+    property bool quickAddOpen: false
 
     readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/settings"
     readonly property string todoPath: stateDir + "/maduki-tech.todo.json"
@@ -52,6 +55,21 @@ Panel {
 
     function closeForPopoutSwitch() {
         root.close();
+    }
+
+    function openQuickAdd() {
+        root.quickAddOpen = true;
+        Qt.callLater(function () {
+            if (root.quickAddOpen) {
+                quickAddField.forceActiveFocus();
+                quickAddField.selectAll();
+            }
+        });
+    }
+
+    function closeQuickAdd() {
+        root.quickAddOpen = false;
+        quickAddField.clear();
     }
 
     function switchPanel(direction) {
@@ -126,18 +144,24 @@ Panel {
         saveTodos();
     }
 
-    function addTodo() {
+    function addTodoTitle(text) {
         root.cancelEdit();
-        var title = todoField.text.replace(/^\s+|\s+$/g, "");
+        var title = String(text).replace(/^\s+|\s+$/g, "");
         if (title === "")
-            return;
+            return false;
         todoModel.insert(0, {
             title: title,
             completed: false
         });
-        todoField.clear();
         saveTodos();
         recount();
+        return true;
+    }
+
+    function addTodo() {
+        if (!root.addTodoTitle(todoField.text))
+            return;
+        todoField.clear();
         todoField.forceActiveFocus();
     }
 
@@ -193,6 +217,12 @@ Panel {
 
     Component.onCompleted: {
         ensureDirsProc.running = true;
+    }
+
+    GlobalShortcut {
+        appid: "maduki-tech.omado"
+        name: "quick-add"
+        onPressed: root.openQuickAdd()
     }
 
     KeyboardPanel {
@@ -501,6 +531,89 @@ Panel {
                                 onClicked: root.clearCompleted()
                             }
                         }
+                    }
+                }
+            }
+        }
+    }
+
+    PanelWindow {
+        id: quickAddWindow
+        screen: root.bar ? root.bar.screen : null
+        visible: root.quickAddOpen
+        color: "transparent"
+        exclusionMode: ExclusionMode.Ignore
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+        WlrLayershell.namespace: "maduki-tech-omado-quick-add"
+        anchors {
+            top: true
+            bottom: true
+            left: true
+            right: true
+        }
+
+        Rectangle {
+            anchors.fill: parent
+            color: Qt.rgba(0, 0, 0, 0.35)
+
+            MouseArea {
+                anchors.fill: parent
+                onClicked: root.closeQuickAdd()
+            }
+
+            Rectangle {
+                id: quickAddCard
+                anchors.centerIn: parent
+                width: Math.min(parent.width - Style.space(48), Style.space(520))
+                height: quickAddColumn.implicitHeight + Style.space(40)
+                radius: Style.cornerRadius * 2
+                color: Color.popups.background
+                border.color: Color.accent
+                border.width: Style.normalBorderWidth
+
+                Column {
+                    id: quickAddColumn
+                    anchors {
+                        left: parent.left
+                        right: parent.right
+                        verticalCenter: parent.verticalCenter
+                        margins: Style.space(20)
+                    }
+                    spacing: Style.space(10)
+
+                    Text {
+                        text: "QUICK ADD"
+                        color: root.bar.foreground
+                        font.family: root.bar.fontFamily
+                        font.pixelSize: Style.font.title
+                        font.bold: true
+                    }
+
+                    TextField {
+                        id: quickAddField
+                        width: parent.width
+                        placeholderText: "Add a task…"
+                        foreground: root.bar.foreground
+                        font.family: root.bar.fontFamily
+
+                        Keys.onPressed: function (event) {
+                            if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                if (root.addTodoTitle(text))
+                                    root.closeQuickAdd();
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Escape) {
+                                root.closeQuickAdd();
+                                event.accepted = true;
+                            }
+                        }
+                    }
+
+                    Text {
+                        text: "Enter to add · Esc to close"
+                        color: Qt.darker(root.bar.foreground, 1.5)
+                        font.family: root.bar.fontFamily
+                        font.pixelSize: Style.font.bodySmall
                     }
                 }
             }
