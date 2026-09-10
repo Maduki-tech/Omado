@@ -14,6 +14,7 @@ Panel {
     property var anchorItem: null
     property var hostWidget: null
     readonly property var barIdentity: hostWidget || root
+    readonly property var anchorWindow: anchorItem ? anchorItem.QsWindow.window : null
     readonly property string label: ""
     property int remaining: 0
 
@@ -90,8 +91,8 @@ Panel {
     }
 
     function setCenterHoverRevealSuppressed(value) {
-        if (root.bar && "centerHoverRevealSuppressed" in root.bar)
-            root.bar.centerHoverRevealSuppressed = value;
+        if (root.bar && typeof root.bar.setCenterHoverRevealSuppressed === "function")
+            root.bar.setCenterHoverRevealSuppressed(value);
     }
 
     function recount() {
@@ -553,12 +554,14 @@ Panel {
 
     PanelWindow {
         id: quickAddWindow
-        screen: root.bar ? root.bar.screen : null
-        visible: root.quickAddOpen
+        screen: root.anchorWindow ? root.anchorWindow.screen : null
+        visible: root.quickAddOpen && !!screen
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+        WlrLayershell.keyboardFocus: visible && screen
+            ? WlrKeyboardFocus.Exclusive
+            : WlrKeyboardFocus.None
         WlrLayershell.namespace: "maduki-tech-omado-quick-add"
         anchors {
             top: true

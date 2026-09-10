@@ -61,6 +61,12 @@ test("panel handles required keyboard actions", () => {
   includes(panel, "root.switchPanel(event.key === Qt.Key_Backtab ? -1 : 1)");
 });
 
+test("panel uses the writable API for center hover suppression", () => {
+  includes(panel, 'typeof root.bar.setCenterHoverRevealSuppressed === "function"');
+  includes(panel, "root.bar.setCenterHoverRevealSuppressed(value)");
+  assert.doesNotMatch(panel, /root\.bar\.centerHoverRevealSuppressed\s*=/);
+});
+
 test("panel exposes the global Quick Add overlay", () => {
   includes(panel, "import Quickshell.Hyprland");
   includes(panel, "GlobalShortcut");
@@ -71,8 +77,12 @@ test("panel exposes the global Quick Add overlay", () => {
   includes(panel, 'root.bar.findPanelWidget(root.moduleName)');
   includes(panel, "focusedWidget !== root.hostWidget");
   includes(panel, "root.close();");
+  includes(panel, "screen: root.anchorWindow ? root.anchorWindow.screen : null");
+  includes(panel, "visible: root.quickAddOpen && !!screen");
+  includes(panel, "WlrLayershell.keyboardFocus: visible && screen");
   includes(panel, "WlrLayer.Overlay");
   includes(panel, "WlrKeyboardFocus.Exclusive");
+  includes(panel, "WlrKeyboardFocus.None");
   includes(panel, 'WlrLayershell.namespace: "maduki-tech-omado-quick-add"');
   includes(panel, 'text: "QUICK ADD"');
   includes(panel, "root.addTodoTitle(text)");
