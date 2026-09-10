@@ -68,14 +68,21 @@ test("panel exposes the global Quick Add overlay", () => {
   includes(panel, 'name: "quick-add"');
   includes(panel, "function openQuickAdd()");
   includes(panel, "function closeQuickAdd()");
-  includes(panel, 'root.bar.findPanelWidget(root.moduleName)');
-  includes(panel, "focusedWidget !== root.hostWidget");
-  includes(panel, "root.close();");
+  includes(panel, "readonly property var hostWindow:");
+  includes(panel, "readonly property var hostScreen:");
+  includes(panel, "screen: root.hostScreen");
+  includes(panel, "root.quickAddOpen && !!root.hostScreen");
+  assert.equal(panel.includes("quickAddWindow.screen"), false);
   includes(panel, "WlrLayer.Overlay");
-  includes(panel, "WlrKeyboardFocus.Exclusive");
+  includes(panel, "WlrKeyboardFocus.None");
+  includes(panel, "Hyprland.focusedMonitor");
   includes(panel, 'WlrLayershell.namespace: "maduki-tech-omado-quick-add"');
   includes(panel, 'text: "QUICK ADD"');
   includes(panel, "root.addTodoTitle(text)");
+});
+
+test("panel uses the scoped bar API for hover suppression", () => {
+  includes(panel, 'typeof root.bar.setCenterHoverRevealSuppressed === "function"');
 });
 
 test("panel renders empty and remaining-task states", () => {

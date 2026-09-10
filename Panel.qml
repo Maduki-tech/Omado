@@ -14,6 +14,9 @@ Panel {
     property var anchorItem: null
     property var hostWidget: null
     readonly property var barIdentity: hostWidget || root
+    readonly property var hostWindow: hostWidget && hostWidget.QsWindow
+        ? hostWidget.QsWindow.window : null
+    readonly property var hostScreen: hostWindow ? hostWindow.screen : null
     readonly property string label: ""
     property int remaining: 0
 
@@ -58,11 +61,11 @@ Panel {
     }
 
     function openQuickAdd() {
-        // Each monitor has its own bar-widget instance. Let the bar choose
-        // the instance on the focused monitor, then open only that overlay.
-        var focusedWidget = root.bar && typeof root.bar.findPanelWidget === "function"
-            ? root.bar.findPanelWidget(root.moduleName) : null;
-        if (!focusedWidget || focusedWidget !== root.hostWidget)
+        // GlobalShortcut is instantiated once per monitor. Only the focused
+        // monitor's widget should open the overlay.
+        var focusedMonitor = Hyprland.focusedMonitor;
+        var screen = root.hostWindow ? root.hostWindow.screen : null;
+        if (!screen || !focusedMonitor || screen.name !== focusedMonitor.name)
             return;
 
         // Keep the quick-add overlay as the only active panel, so one Escape
@@ -90,7 +93,9 @@ Panel {
     }
 
     function setCenterHoverRevealSuppressed(value) {
-        if (root.bar && "centerHoverRevealSuppressed" in root.bar)
+        if (root.bar && typeof root.bar.setCenterHoverRevealSuppressed === "function")
+            root.bar.setCenterHoverRevealSuppressed(value);
+        else if (root.bar && "centerHoverRevealSuppressed" in root.bar)
             root.bar.centerHoverRevealSuppressed = value;
     }
 
@@ -553,12 +558,13 @@ Panel {
 
     PanelWindow {
         id: quickAddWindow
-        screen: root.bar ? root.bar.screen : null
-        visible: root.quickAddOpen
+        screen: root.hostScreen
+        visible: root.quickAddOpen && !!root.hostScreen
         color: "transparent"
         exclusionMode: ExclusionMode.Ignore
         WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.keyboardFocus: WlrKeyboardFocus.Exclusive
+        WlrLayershell.keyboardFocus: root.quickAddOpen && !!root.hostScreen
+            ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
         WlrLayershell.namespace: "maduki-tech-omado-quick-add"
         anchors {
             top: true
