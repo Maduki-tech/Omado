@@ -83,6 +83,8 @@ test("panel exposes the global Quick Add overlay", () => {
 
 test("panel uses the scoped bar API for hover suppression", () => {
   includes(panel, 'typeof root.bar.setCenterHoverRevealSuppressed === "function"');
+  includes(panel, "root.bar.setCenterHoverRevealSuppressed(value)");
+  assert.doesNotMatch(panel, /root\.bar\.centerHoverRevealSuppressed\s*=/);
 });
 
 test("panel renders empty and remaining-task states", () => {
