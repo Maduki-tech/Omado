@@ -76,6 +76,7 @@ test("todo keyboard navigation uses a bounded selection and existing actions", (
   includes(panel, "property int selectedIndex: -1");
   includes(panel, "function normalizeSelection()");
   includes(panel, "function moveSelection(delta)");
+  includes(panel, "selectedIndex = ((selectedIndex + delta) % todoModel.count + todoModel.count) % todoModel.count;");
   includes(panel, "currentIndex: root.selectedIndex");
   includes(panel, "onMoveRequested: function (dx, dy)");
   includes(panel, "root.moveSelection(dy)");
@@ -88,6 +89,19 @@ test("todo keyboard navigation uses a bounded selection and existing actions", (
   includes(panel, "Style.selectedFillFor(root.bar.foreground, Color.accent)");
   includes(panel, "function ensureSelectedVisible()");
   includes(panel, "row.mapToItem(todoScroll.contentItem, 0, 0)");
+});
+
+test("adding a todo selects the new top row without moving focus from the add field", () => {
+  const start = panel.indexOf("function addTodoTitle(text)");
+  const end = panel.indexOf("\n    function addTodo()", start);
+  assert.notEqual(start, -1);
+  assert.notEqual(end, -1);
+  const addTodoTitle = panel.slice(start, end);
+
+  includes(addTodoTitle, "todoModel.insert(0,");
+  includes(addTodoTitle, "selectedIndex = 0;");
+  assert.equal(addTodoTitle.includes("forceActiveFocus"), false);
+  includes(panel, "todoField.forceActiveFocus()");
 });
 
 test("panel exposes the global Quick Add overlay", () => {

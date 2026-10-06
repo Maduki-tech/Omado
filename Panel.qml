@@ -133,7 +133,7 @@ Panel {
         if (selectedIndex < 0)
             selectedIndex = delta > 0 ? 0 : todoModel.count - 1;
         else
-            selectedIndex = Math.max(0, Math.min(todoModel.count - 1, selectedIndex + delta));
+            selectedIndex = ((selectedIndex + delta) % todoModel.count + todoModel.count) % todoModel.count;
     }
 
     // The ListView is as tall as its whole model and the surrounding Flickable
@@ -221,14 +221,11 @@ Panel {
         var title = String(text).replace(/^\s+|\s+$/g, "");
         if (title === "")
             return false;
-        var hadSelection = selectedIndex >= 0;
         todoModel.insert(0, {
             title: title,
             completed: false
         });
-        if (hadSelection)
-            selectedIndex++;
-        normalizeSelection();
+        selectedIndex = 0;
         saveTodos();
         recount();
         return true;
