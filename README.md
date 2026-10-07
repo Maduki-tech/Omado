@@ -15,7 +15,12 @@ Add, complete, and clear tasks right from your bar. Tasks are stored locally in
 - Open tasks stay above completed tasks automatically
 - Clear all completed tasks in one click
 - Live "remaining" counter in the panel header
-- Keyboard friendly: Esc closes, Tab switches panels
+- Vim-style todo navigation: `j`/`k` or Up/Down select a task and wrap at either end;
+  Enter/Space toggle it, `e` edits it, and `x` deletes it
+- Adding a task selects the new top row while keeping focus in the add field
+- Tab from the add field focuses the todo list; Shift+Tab returns to the field,
+  and Tab from the list switches panels
+- Esc closes the panel
 
 ## Quick Add Shortcut
 

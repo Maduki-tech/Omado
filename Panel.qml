@@ -24,6 +24,9 @@ Panel {
     // it so switching to another row can flush the pending text first.
     property int editingIndex: -1
     property var activeEditor: null
+    // The selected row is independent of keyboard focus: the text fields may
+    // own focus while this index keeps the list's visual cursor in sync.
+    property int selectedIndex: -1
     property bool quickAddOpen: false
 
     readonly property string stateDir: Quickshell.env("HOME") + "/.local/state/omarchy/settings"
@@ -105,11 +108,65 @@ Panel {
         remaining = n;
     }
 
+    function normalizeSelection() {
+        if (todoModel.count === 0)
+            selectedIndex = -1;
+        else if (selectedIndex < 0)
+            selectedIndex = 0;
+        else if (selectedIndex >= todoModel.count)
+            selectedIndex = todoModel.count - 1;
+    }
+
+    function selectTodo(index, focusList) {
+        if (index < 0 || index >= todoModel.count)
+            return;
+        selectedIndex = index;
+        if (focusList)
+            keyCatcher.forceActiveFocus();
+    }
+
+    function moveSelection(delta) {
+        if (todoModel.count === 0) {
+            selectedIndex = -1;
+            return;
+        }
+        if (selectedIndex < 0)
+            selectedIndex = delta > 0 ? 0 : todoModel.count - 1;
+        else
+            selectedIndex = ((selectedIndex + delta) % todoModel.count + todoModel.count) % todoModel.count;
+    }
+
+    // The ListView is as tall as its whole model and the surrounding Flickable
+    // scrolls the panel, so reveal the selected delegate through that Flickable.
+    function ensureSelectedVisible() {
+        if (selectedIndex < 0)
+            return;
+        Qt.callLater(function () {
+            var row = todoList.itemAtIndex(root.selectedIndex);
+            if (!row)
+                return;
+            var rowTop = row.mapToItem(todoScroll.contentItem, 0, 0).y;
+            var rowBottom = rowTop + row.height;
+            if (rowTop < todoScroll.contentY)
+                todoScroll.contentY = rowTop;
+            else if (rowBottom > todoScroll.contentY + todoScroll.height)
+                todoScroll.contentY = rowBottom - todoScroll.height;
+        });
+    }
+
     function loadTodos(raw) {
         var todos = Model.parseTodos(raw);
+        var previousSelectedIndex = selectedIndex;
+        selectedIndex = -1;
         todoModel.clear();
         for (var i = 0; i < todos.length; ++i)
             todoModel.append(todos[i]);
+        if (todoModel.count === 0)
+            selectedIndex = -1;
+        else if (previousSelectedIndex < 0)
+            selectedIndex = 0;
+        else
+            selectedIndex = Math.min(previousSelectedIndex, todoModel.count - 1);
         recount();
     }
 
@@ -140,6 +197,7 @@ Panel {
     function startEdit(index) {
         if (index < 0 || index >= todoModel.count)
             return;
+        selectedIndex = index;
         if (root.editingIndex !== index)
             flushEdit();
         root.editingIndex = index;
@@ -167,6 +225,7 @@ Panel {
             title: title,
             completed: false
         });
+        selectedIndex = 0;
         saveTodos();
         recount();
         return true;
@@ -183,10 +242,19 @@ Panel {
         root.cancelEdit();
         if (index < 0 || index >= todoModel.count)
             return;
+        var oldSelectedIndex = selectedIndex;
         var completed = !todoModel.get(index).completed;
+        var destination = completed ? todoModel.count - 1 : 0;
         todoModel.setProperty(index, "completed", completed);
         // Keep the two states separated without changing order within either group.
-        todoModel.move(index, completed ? todoModel.count - 1 : 0, 1);
+        todoModel.move(index, destination, 1);
+        if (oldSelectedIndex === index)
+            selectedIndex = destination;
+        else if (index < oldSelectedIndex && destination >= oldSelectedIndex)
+            selectedIndex = oldSelectedIndex - 1;
+        else if (index > oldSelectedIndex && destination <= oldSelectedIndex)
+            selectedIndex = oldSelectedIndex + 1;
+        normalizeSelection();
         saveTodos();
         recount();
     }
@@ -195,7 +263,12 @@ Panel {
         root.cancelEdit();
         if (index < 0 || index >= todoModel.count)
             return;
+        if (index < selectedIndex)
+            selectedIndex--;
+        else if (index === selectedIndex && index === todoModel.count - 1)
+            selectedIndex = todoModel.count > 1 ? index - 1 : -1;
         todoModel.remove(index);
+        normalizeSelection();
         saveTodos();
         recount();
     }
@@ -205,11 +278,22 @@ Panel {
         var removed = false;
         for (var i = todoModel.count - 1; i >= 0; --i) {
             if (todoModel.get(i).completed) {
+                if (i < selectedIndex)
+                    selectedIndex--;
+                else if (i === selectedIndex) {
+                    if (i < todoModel.count - 1)
+                        selectedIndex = i;
+                    else if (todoModel.count > 1)
+                        selectedIndex = i - 1;
+                    else
+                        selectedIndex = -1;
+                }
                 todoModel.remove(i);
                 removed = true;
             }
         }
         if (removed) {
+            normalizeSelection();
             saveTodos();
             recount();
         }
@@ -259,7 +343,23 @@ Panel {
             blocked: todoField.activeFocus || root.editingIndex >= 0
             onCloseRequested: root.close()
             onTabRequested: function (direction) {
-                root.switchPanel(direction);
+                if (direction < 0)
+                    todoField.forceActiveFocus();
+                else
+                    root.switchPanel(1);
+            }
+            onMoveRequested: function (dx, dy) {
+                if (dy !== 0)
+                    root.moveSelection(dy);
+            }
+            onActivateRequested: root.toggleTodo(root.selectedIndex)
+            onDeleteRequested: {
+                if (root.selectedIndex >= 0)
+                    root.removeTodo(root.selectedIndex);
+            }
+            onTextKey: function (text) {
+                if (text === "e")
+                    root.startEdit(root.selectedIndex);
             }
 
             Flickable {
@@ -331,7 +431,13 @@ Panel {
                                     root.close();
                                     event.accepted = true;
                                 } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
-                                    root.switchPanel(event.key === Qt.Key_Backtab ? -1 : 1);
+                                    var backwards = (event.modifiers & Qt.ShiftModifier) || event.key === Qt.Key_Backtab;
+                                    if (!backwards && todoModel.count > 0) {
+                                        root.normalizeSelection();
+                                        keyCatcher.forceActiveFocus();
+                                    } else {
+                                        root.switchPanel(backwards ? -1 : 1);
+                                    }
                                     event.accepted = true;
                                 }
                             }
@@ -376,6 +482,8 @@ Panel {
                         interactive: false
                         model: todoModel
                         spacing: Style.space(4)
+                        currentIndex: root.selectedIndex
+                        onCurrentIndexChanged: root.ensureSelectedVisible()
 
                         delegate: Rectangle {
                             id: todoRow
@@ -384,12 +492,15 @@ Panel {
                             required property bool completed
 
                             readonly property bool editing: root.editingIndex === index
+                            readonly property bool selected: root.selectedIndex === index
 
                             width: todoList.width - Style.space(32)
                             x: Style.space(16)
                             height: Style.space(46)
                             radius: Style.cornerRadius
-                            color: rowArea.containsMouse ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
+                            color: todoRow.selected
+                                ? Style.selectedFillFor(root.bar.foreground, Color.accent)
+                                : rowArea.containsMouse ? Style.hoverFillFor(root.bar.foreground, Color.accent) : "transparent"
 
                             Row {
                                 anchors.fill: parent
@@ -459,9 +570,11 @@ Panel {
                                     Keys.onPressed: function (event) {
                                         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                                             root.commitEdit(todoRow.index, editField.text);
+                                            Qt.callLater(function () { keyCatcher.forceActiveFocus(); });
                                             event.accepted = true;
                                         } else if (event.key === Qt.Key_Escape) {
                                             root.cancelEdit();
+                                            Qt.callLater(function () { keyCatcher.forceActiveFocus(); });
                                             event.accepted = true;
                                         } else if (event.key === Qt.Key_Tab || event.key === Qt.Key_Backtab) {
                                             event.accepted = true;
@@ -494,7 +607,10 @@ Panel {
                                     anchors.fill: parent
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.removeTodo(index)
+                                    onClicked: {
+                                        root.selectTodo(index, true);
+                                        root.removeTodo(index);
+                                    }
                                 }
                             }
 
@@ -507,10 +623,13 @@ Panel {
                                 acceptedButtons: Qt.LeftButton | Qt.RightButton
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: function (mouse) {
-                                    if (mouse.button === Qt.RightButton)
+                                    if (mouse.button === Qt.RightButton) {
+                                        root.selectTodo(index, false);
                                         root.startEdit(index);
-                                    else
+                                    } else {
+                                        root.selectTodo(index, true);
                                         root.toggleTodo(index);
+                                    }
                                 }
                             }
                         }
